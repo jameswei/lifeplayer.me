@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title><![CDATA[Life Player]]></title>
+  <subtitle><![CDATA[Be a life player]]></subtitle>
+  <link href="/atom.xml" rel="self"/>
+  <link href="http://lifeplayer.me/"/>
+  <updated>2016-01-25T15:52:28.000Z</updated>
+  <id>http://lifeplayer.me/</id>
+  
+  <author>
+    <name><![CDATA[Jia Wei]]></name>
+    
+  </author>
+  
+  <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title><![CDATA[Mico的朴素架构之旅]]></title>
+    <link href="http://lifeplayer.me/2016/01/21/Mico%E7%9A%84%E6%9C%B4%E7%B4%A0%E6%9E%B6%E6%9E%84%E4%B9%8B%E6%97%85/"/>
+    <id>http://lifeplayer.me/2016/01/21/Mico的朴素架构之旅/</id>
+    <published>2016-01-21T07:26:36.000Z</published>
+    <updated>2016-01-25T15:52:28.000Z</updated>
+    <content type="html"><![CDATA[<h2 id="u5E8F_u8A00"><a href="#u5E8F_u8A00" class="headerlink" title="序言"></a>序言</h2><blockquote>
+<p>Mico作为一款面向海外市场的社交应用，其产品范式决定了它的技术架构。本文将由浅入深得解析其架构演进的过程，分享在这一过程中的经验和见解，同时希望能给那些同样构建社交应用的同仁一些帮助。</p>
+</blockquote>
+<h2 id="u4EA7_u54C1_u80CC_u666F"><a href="#u4EA7_u54C1_u80CC_u666F" class="headerlink" title="产品背景"></a>产品背景</h2><h4 id="Mico_u662F_u4EC0_u4E48"><a href="#Mico_u662F_u4EC0_u4E48" class="headerlink" title="Mico是什么"></a>Mico是什么</h4><p>Mico是一款基于地理位置的匿名社交应用，初期的产品形态广泛借鉴了其他成熟或成功的产品，如陌陌®和Line®。通过它可以发现周围的人和动态，与陌生人建立关系并聊天（支持文本、图片、语音和短视频），发布多媒体内容的动态。同时提供了应用内付费的功能，包括表情贴图、VIP身份以及虚拟礼物等。</p>
+<p>从应用的形态可以看出它的范式，典型的UGC+IM，在技术架构这一层就是短连接API和长连接Socket。</p>
+<p>不幸的是，产品启动时，技术团队总共4人（含笔者）。同时团队成员都没有什么名校背景和工程经验积累。从创立第一天，我们就确定了团队的技术准则和文化：『精益创业（Lean），不造轮子』。</p>
+<p>Lean Startup提倡的是一种方法论或流程，鼓励团队用尽可能快得速度和尽可能低得成本去实践想法从而形成产品；接着要尽可能全面得度量产品从而产出各种数据；之后通过分析和挖掘数据将结果回溯到想法中。<br><img src="https://ooo.0o0.ooo/2016/01/20/569fe1d8c15a2.png" alt="leanstartup.png"><br>软件及系统工程发展至今，前人创造了太多成熟、可靠的轮子，我想『站在巨人肩膀上』是十分正确得选择。<br><img src="https://ooo.0o0.ooo/2016/01/20/569fe1d8d993e.png" alt="standongiantshoulder.png"></p>
+<h4 id="u76F8_u5173_u6570_u636E"><a href="#u76F8_u5173_u6570_u636E" class="headerlink" title="相关数据"></a>相关数据</h4><p>截至到编辑本文为止，罗列一些产品的相关数据量级，从一个侧面也可以反映出技术架构是如何支撑产品发展的。</p>
+<ul>
+<li>注册用户数：&gt;20,000,000</li>
+<li>日活跃用户数：&gt;3,000,000</li>
+<li>日在线用户数：&gt;3,500,000</li>
+<li>日消息量：&gt;15,000,000</li>
+<li>日通知推送量：&gt;20,000,000</li>
+<li>日API请求量：&gt;500,000,000</li>
+<li>UGC内容量：&gt;60,000,000（图片），&gt;5,000,000（语音/短视频），&gt;20,000,000（动态/评论/赞）</li>
+</ul>
+<h2 id="u521D_u8D77_u7089_u7076"><a href="#u521D_u8D77_u7089_u7076" class="headerlink" title="初起炉灶"></a>初起炉灶</h2><p>最初的阶段里，技术团队以最低的代价开始投入协同开发。成熟可靠的Java栈作为服务器端的主要语言，整个系统架构完全由业务驱动，简单分层，粗放、够用就好。</p>
+<h4 id="u73AF_u5883_u53CA_u6D41_u7A0B"><a href="#u73AF_u5883_u53CA_u6D41_u7A0B" class="headerlink" title="环境及流程"></a>环境及流程</h4><p><img src="https://ooo.0o0.ooo/2016/01/20/569fe387b42bf.png" alt="process.png"><br>如上图所示，团队使用Bitbucket作为SCM，使用Jenkins完成自动化测试和构建，搭建Nexus作为内部的Maven Repo。使用Linode的裸VM来搭建生产环境，选择CentOS 6.5作为操作系统。</p>
+<h4 id="u67B6_u6784_u7EC4_u6210"><a href="#u67B6_u6784_u7EC4_u6210" class="headerlink" title="架构组成"></a>架构组成</h4><p><img src="https://ooo.0o0.ooo/2016/01/20/569fe47d523ac.png" alt="stage1-deployment.png"><br><img src="https://ooo.0o0.ooo/2016/01/20/569fe47d5729d.png" alt="stage1-logic.png"><br>通过上述两幅图，可以概览当时的架构组成。上图是部署拓扑，下图是逻辑架构。</p>
+<p>最上层为接入层，我们使用Nginx对HTTP请求做反响代理和负载均衡，其中一个实例用来serve所有的业务API请求，中间这个serve产品官网、外部内容分享以及其他应用内HTML页面，最右边的实例挡在我们文件存储前面。其中socket长连接端口是直接暴露出来的。</p>
+<p>Nginx之下就是服务层，由业务服务和文件存储系统的API以及用于serve官网和内容分享的web server组成。</p>
+<p>业务backend暴露为REST API，为移动端提供业务功能。不同的业务分成各个module，由Maven来管理依赖和构建过程。部署时作为一个war包整体，不同业务都是Java进程内调用。</p>
+<p>服务层之下是由缓存和落地存储组成的各类资源。其中缓存部分我们使用Memcached，前期无sharding，只做primary和backup结构，由client侧双写的方式实现，primary不可用时读backup。</p>
+<p>由于业务形态的特点，我们的落地存储使用了MySQL，MongoDB和Redis。<br>其中，MySQL作为主要的持久化存储组件，大部分业务数据都落在MySQL中，采用一主一从的拓扑（按业务分库但无分表，client侧分离读写）这时候MySQL主有单点隐患。<br>由于MongoDB对spatial index的支持非常好，所以主要用于应用内的各种空间地理位置查询，存储了应用中『用户』和『动态』这两类内容，当时只是单主的拓扑。很显然，这也有单点隐患。</p>
+<p>诸如图片、短视频等的文件存储，由于当时并没有价廉物美同时针对海外市场的云服务，特别是前期我们数据量还不大。所以我们自建了文件存储服务。</p>
+<p>由于已经使用了MongoDB，所以文件存储这块也就顺便选择了GridFS。<br>在这之上，是文件访问API，完成对GridFS的访问，犹豫逻辑非常轻，只有图片压缩和生成缩略图的过程，所以我们没有选择Java来实现，而是使用了更简便快捷的NodeJS来构建，同时使用GraphicsMagick的js binding来处理图片压缩、生成缩略图等。<br>我们知道对于图片等其他二进制内容，要尽可能cache或分发到多个节点（CDN），但我们不具备这些，转而直接使用Nginx的local cache来做缓存，通过挂载更大的本地存储来扩容。</p>
+<p>同时，这个Nginx实例也作为产品官网、外部内容分享以及应用内各HTML5页面的server，各类二进制资源也在local cache中缓存。动态请求转发到下游的NodeJS。</p>
+<p>最后是socket server，提供通信功能，初期长链服务和业务部署在一起，开启单独的端口并直接暴露出去。此时的长链服务使用cache了做remote session管理，同时消息内容写cache及MySQL。</p>
+<h4 id="u5E94_u5BF9_u589E_u957F"><a href="#u5E94_u5BF9_u589E_u957F" class="headerlink" title="应对增长"></a>应对增长</h4><p>这个阶段的扩展非常简单且便于操作。<br>对于接入层以及API，直接水平扩展业务server和socket server，Tomcat多实例部署，Nginx通过round-robbin方式来做负载均衡。<br>对于文件系统扩展，扩展用于文件系统的Nginx，相当于间接扩展了Nginx的local cache；往下也去扩展文件系统API的实例数，比如按核数部署NodeJS多进程；再往下添加GridFS的secondary实例。<br>存储资源层面，扩展缓存和存储的从实例来抗读压力。</p>
+<p>这样各层进行扩展后，形成下图所示的结构。<br><img src="https://ooo.0o0.ooo/2016/01/20/569fe86a454bd.png" alt="stage1-scaleout.png"></p>
+<h4 id="u66B4_u9732_u95EE_u9898"><a href="#u66B4_u9732_u95EE_u9898" class="headerlink" title="暴露问题"></a>暴露问题</h4><p>早期由于人力和精力的限制，除了应用后台，无其他周边系统。</p>
+<p>这就导致了应用内若干功能是需要人工准备数据的，比如推荐用户、推荐动态等等推荐相关的功能，是需要人工标记的。<br>但是我们也将这种做法当做功能来推，比如我们通过运营活动通知用户，可以申请成为『推荐用户』，审核通过后就成为『推荐用户』。</p>
+<p>除此之外，社交应用最重要的一点是时刻知道数据的变化，以数据来驱动，特别是做A/B test这种情况，前期使用NodeJS + Bootstrap搭建简易的后台，用来做应用内用户的管理，比如投诉、建议、封禁/解封等等。</p>
+<p>由于我们也缺少相应的日志流式处理或分析，所以所有数据的统计和展现都依赖crontab + rsync + grep/awk大法，定期得搬运日志，并集中统计，然后写库再展现。</p>
+<p>除此之外，我们也缺乏周边的运维工具，只能全手工的方式做。<br>比如监控，Linode为我们提供了非常简单的监控，主要是系统层面，包括CPU、Load、Mem、Disk和Network等等，并没有应用级或者说业务级的监控和告警工具。<br>各个组件或系统的监控，只能依赖内置的各种类stats工具来手工查看。</p>
+<p>在那个时期，构建和发布也很弱，通常功能开发完后，都是本地联调，手工得做一些冒烟测试和新功能测试。通过后，由Jenkins Job来构建移动端和服务端。产生artifacts后手工登录线上环境进行上线。</p>
+<p>所以这个阶段暴露的问题非常多：</p>
+<ol>
+<li>缺乏相应的专门的工具来使得我们全面并且实时得了解我们应用的各项数据。</li>
+<li>各种手工参与的环节产生的错误不可控，所以不得不经常消耗了额外的精力去救火。</li>
+</ol>
+<h2 id="u9AD8_u901F_u53D1_u5C55"><a href="#u9AD8_u901F_u53D1_u5C55" class="headerlink" title="高速发展"></a>高速发展</h2><p>这个时期我们的运气还不错，数据增长很快。所以我们一边继续快速迭代产品一边进行架构的改造和升级。<br>这里借用流行的一句话『开着飞机换引擎』，但是我们知道我们还没飞起来，充其量是个汽车，所以就叫开车汽车换轮胎吧。<br><img src="https://ooo.0o0.ooo/2016/01/20/569fe9f432e01.png" alt="stage2-status.png"></p>
+<h4 id="u67B6_u6784_u6539_u9020"><a href="#u67B6_u6784_u6539_u9020" class="headerlink" title="架构改造"></a>架构改造</h4><p>我们从三个点着手：</p>
+<ol>
+<li><p>异步化<br>我们通过引入消息组件，在请求环节和消息环节都异步化了。</p>
+</li>
+<li><p>拆分<br>分而治之的思想非常朴素，在计算机世界里广泛使用，无论是微观的算法，还是宏观的系统架构。我们也从API、Service、Resource几个层面做了拆分。</p>
+</li>
+<li><p>文件存储<br>老的文件存储方案：Nginx（local cache）+NodeJS（API）+GridFS（storage）随着数据量的增长带来巨大的运维痛苦和较大的性能问题。具体表现在：</p>
+<ul>
+<li>每次在做scaleout时，需要垂直得部署这样一整套组件，同时新添加的GridFS实例作为seconary需要一次性全量从primary节点复制，占用带宽，而且耗时很长。同时standby状态下无法提供服务。</li>
+<li>Primary在持续的较大写入量下，secondary节点会产生较大同步延迟，长时间追不上。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://ooo.0o0.ooo/2016/01/20/569feb19d578e.png" alt="stage2-refactory.png"></p>
+<p>改造之后的整体架构如上图，其中：</p>
+<ul>
+<li>API的请求，将上下行请求分离，上行请求全部走队列异步处理。</li>
+</ul>
+<p>这个过程中，移动端也同步改造，上行请求时先假写。后端接受请求后，也假写，其实是写过期时间非常短到cache，然后写队列，具体的业务逻辑在队列处理器中完成。如更新cache、更新DB、发送通知、发送消息等等。</p>
+<ul>
+<li>对话场景中，发消息的过程也异步化，其中这里分两部分。</li>
+</ul>
+<p>一部分是发消息的上行请求中类似API请求，服务端先将消息写cache，同时更新消息协议中涉及的轻量资源（比如redis），接着再写队列，消息真正落库以及推送通知或消息给接受端的行为在队列处理器中完成。<br>这个过程中，如果同步写cache写未读完成，但是队列处理还没完成的空隙中，如果移动端有心跳那直接就获取消息了，队列再处理时就可以省略写库以及推送的过程。</p>
+<p>另一个部分是我们长链的socket server也会水平扩展，这种情况下，会话的双方如果在两个不同的实例上，那么socket server之间的通信既可以走RPC通信也可以走队列通信，这个环节为什么走队列是因为业务功能中的『消息回执功能』，比如已送达、已阅读等。</p>
+<ul>
+<li>各层拆分</li>
+</ul>
+<p>API层面，我们按业务划分了逻辑的API Pool，通过这样方式可以更细粒度的控制请求，通过Nginx细粒度的控制流量，可以根据需要单独扩展某业务，也可以在故障或高峰时单独降级某业务。<br>Service层面，参照API，垂直得拆分各个业务service，为之后的微服务化铺路，将各业务作为内聚的最小服务单元。</p>
+<p>资源层面，比如Memcache、Redis、MySQL、MongoDB等等，按业务拆分各自的Pool，这样可以根据各业务数据量的不同和可预计的增长量，更细粒度的控制这些组件的部署；同时也能根据业务的重要性独立控制降级。</p>
+<ul>
+<li>文件存储系统的迁移</li>
+</ul>
+<p>我们最终选择AWS S3作为新的文件存储，这时候面临的问题就是如何迁移数据。<br>通过分析我们发现全量数据中有大量缩略图。这里插述以下之前的架构中对于每张新上传的图片来说共生成3种尺寸的缩略图，对于视频来说共3种尺寸的首帧缩略图，这些是用于提供给不同屏幕分辨率的设备。所以如果连缩略图一起迁移太耗时，我们只迁移原图。</p>
+<p>于是我们用Golang写了个工具来做迁移，但是问题来了，迁移过去的只有原图，用户怎么继续获得老图片的缩略图？我们发现AWS上还有一个Lambda服务，可以用于S3任意action的回调函数使用。所以我们将原来NodeJS的文件系统API中的生成缩略图的逻辑摘出来放到AWS的Lambda服务上。</p>
+<p>所以第一步我们从一个时间点开始双写数据，同时写GridFS和S3，同时使用工具批量迁移老数据。这样我们就很快将原始图片、短视频以及语音迁移到S3上了。<br>搭配S3，AWS还提供了Cloudfront，它是一个Global的CDN服务，正好适合我们的海外用户，迁移过程中它同时就将内容复制到各个region的节点上。</p>
+<p>这样我们就完成了无缝文件系统的迁移。</p>
+<h4 id="u6DFB_u8865_u8FD0_u7EF4_u5DE5_u5177"><a href="#u6DFB_u8865_u8FD0_u7EF4_u5DE5_u5177" class="headerlink" title="添补运维工具"></a>添补运维工具</h4><blockquote>
+<p>…… 解放生产力，发展生产力…… ——邓小平</p>
+</blockquote>
+<p>工具及自动化的意义就在于，解放工程师的精力和时间，去做产品中更有意义的事情。<br>所以我们在这个阶段一边补全运维工具，一边为应对高峰期半手工的扩容。</p>
+<ul>
+<li>环境</li>
+</ul>
+<p>我们使用Vagrant构建封装了dev环境，它使得团队里每人都可以秒级在本地启动一个minimal的线上环境，用于开发测试等。<br>相比现在流行的容器化技术，我觉得Vagrant和它的box方式更适合于非生产环境下的抽象和封装，分发起来也很方便。</p>
+<p>此外，再借助Vagrant（virtualbox），我们将部分针对服务器端的自动化测试集成到了Jenkins的自动构建过程中，大大提高了产品持续集成的程度和发布上线的可靠度。<br>同时，针对线上环境所有机器的管理，以前都是补丁叠补丁的shell/python脚本，可维护性非常差，内心愈发崩溃。这个阶段我们使用ansible作为自动化管理工具来进行统一管理和作业。</p>
+<ul>
+<li>监控</li>
+</ul>
+<p>使用Munin（python-munin）搭建了监控系统，Munin的plugin机制可以方便灵活的定制和扩展监控指标。<br>监控项覆盖各类资源或组件的状态信息、性能信息以及健康状态等，同时也包含生产环境所有机器的系统状态。</p>
+<ul>
+<li>控制台</li>
+</ul>
+<p>社交应用日常有大量的运营场景和需求，比如应用内官方帐号发布动态、发消息，应用内用户反馈，用户封禁、解封，内容审核，外部内容分享等。</p>
+<p>之前阶段的curl/postman+admin接口的方式效率低，同时对于非技术人员不够友好。我们用NodeJS+Angular+bootstrap搭建了用户管理和内容管理后台。</p>
+<p>除了将应用内的用户和内容管理起来，还需要对大量的应用数据进行分析和展示。<br>早期使用的crontab+rsync+grep/awk大法已经力不从心，维护起来比较痛苦而且定时+离线的方式已经不能满足我们统计和展现的需要。</p>
+<p>我们使用fluentd+mongodb（capped collection）的方案来替换，将查询和展示也嵌入到控制台中。<br><img src="https://ooo.0o0.ooo/2016/01/20/569fede7ab4b1.png" alt="stage2-devops.png"></p>
+<ul>
+<li>半手工扩容</li>
+</ul>
+<p>为什么称作半手工，这阶段的系统扩容已经可以结合监控系统的各类实时数据指标以及运营活动来进行。<br>我们通过ansible的playbook，编排好对系统各部分的扩容的行为，结合预先生成的base image，可以快速的创建机器实例、创建环境、更新各类配置数据，如前端LB，资源配置等。</p>
+<h2 id="u6B65_u5165_u6B63_u8F68"><a href="#u6B65_u5165_u6B63_u8F68" class="headerlink" title="步入正轨"></a>步入正轨</h2><p>到了新的阶段，应用功能迭代非常快，数据增长也很快。除了整体系统的扩展和改造之外，还需要各种周边系统的支撑。</p>
+<h4 id="u65E5_u5FD7_u5206_u6790"><a href="#u65E5_u5FD7_u5206_u6790" class="headerlink" title="日志分析"></a>日志分析</h4><p>随着业务的增多，数据量的增长，系统各处都时时刻刻得产生不同类型的、大量的数据。<br>这里面有业务日志，有行为/访问/统计日志（包括HTTP、Service/RPC、Cache/DB等不同层次），还有一些BI用途的日志。<br>这些日志用的用于监控，有的用于统计，有的面向工程师，有的面向运营。所以日志分析处理是很有价值的。</p>
+<p>从最早期的crontab+rsync+grep/awk大法，这种方式足够简单，但是灵活性差，可操作性差，属于非实时且离线的。</p>
+<p>之后过渡导fluentd+mongodb（capped collection）的方案，通过nodejs+angular集成到内部使用的控制台中。<br>这种方案下，原始日志数据的展现和查看倒是方便了，但是对于运营人员来说查询的灵活性和友好性不高（因为要写mongo的query），同时复杂的查询（比如计算近1个月内的5种留存率的每日数据）都是实时计算来渲染。</p>
+<p>最终我们过渡导ELK+kafka/redis的方案。<br><img src="https://ooo.0o0.ooo/2016/01/20/569fef6b2e1e9.png" alt="stage3-log.png"></p>
+<p>架构如图中所示，非常典型的ELK使用场景<br>根据使用场景不同和目的不同。其中部分日志由logstash收集并写入Kafka集群，之后由logstash再送入ES索引并存储，展示到kibana上，这种大部分是无计算或少计算（聚合）的指标数据。</p>
+<p>另一部分是需要做计算、统计类的日志数据，也由logstash收集，接着写kafka，再由storm来消费。Storm流式地进行业务数据的聚合计算，主要是各种运营数据统计，比如各种xx率，xx趋势，a/b test效果等等。</p>
+<h4 id="u76D1_u63A7_u544A_u8B66"><a href="#u76D1_u63A7_u544A_u8B66" class="headerlink" title="监控告警"></a>监控告警</h4><p>众所周知，自动化运维其中最重要的一项指标就是『对你的系统了如指掌，对你的数据心中有数，在故障发生前告警出来』<br>所以随着数据规模和业务复杂度一步步扩大时，需要加强监控/告警系统的建设。</p>
+<p>我们希望实时了解到生产环境甚至包括staging环境每时每刻的系统状况，希望实时了解到各类服务的重要指标（比如错误率、平均响应、消息堆积数等）、健康状态、离安全水位线还有多少（通常这是我们进行扩容的重要依据之一）。而当某项数据指标超过了我们设定的阈值，那就要尽快得通知到我们。</p>
+<p>在这样的目标下，Mico的监控/告警系统也是逐步完善的。</p>
+<p>如前面讲到，最早期时系统层面的监控和告警依赖主机提供商，同时对用到的各种组件或系统的监控，则完全依赖各自自身的类似stats功能，直接输出到terminal中，而对业务层面则完全是『人工冒烟监控』。这是我自造的词，就是人为得时不时点一点功能刷新一下，来判断系统是否健康，如果刷不出来数据了，或者超时了，再登录上去看日志。可想而知，这种方式耗时耗力且非常低效，毫无时效性。</p>
+<p>之后我们将监控改造成基于Munin的，它提供很多开箱即用的插件，通过通过它的插件机制，我们可以自己写python的插件，很方便的进行扩展。<br>在Munin上我们将所有的系统层面、组件层面以及各类服务的所有监控项都集中起来统一展示到dashboard上，同时通过自定义得方式来设置告警。</p>
+<p>当我们将生产环境迁移到AWS后，发现AWS自带的监控和通知组件CloudWatch很方便，能天然得和AWS上各类服务集成，通过简单的配置就可以将各类数据监管起来。（除了展示界面丑了点）<br>所以我们将监控分开，所有系统层面的监控都交给cloudwatch，告警部分集成aws的ses和sns，将告警信息直接推送邮件或移动设备。<br>各种基础设施的应用层面的监控，仍然使用Munin，但是将监控项扩展到容器、JVM状况，其他JMX扩展，比如socket server中队列堆积，kafka中的JMX数据等。架构图如下<br><img src="https://ooo.0o0.ooo/2016/01/20/569fefeb03086.png" alt="stage3-monitor.png"></p>
+<h4 id="RPC_u670D_u52A1_u6846_u67B6"><a href="#RPC_u670D_u52A1_u6846_u67B6" class="headerlink" title="RPC服务框架"></a>RPC服务框架</h4><p>随着产品的不断迭代，业务变得愈发复杂，all-in-one的部署方式使得所有业务都绑在一起，无法单独控制或保障。<br>所以通过前期的架构改造中我们已经将各业务拆分成了若干服务。<br>拆分后，根据不同业务的特点和重要程度，我们可以以更细粒度管理服务，比如可以单独扩展某服务以支撑某个业务的压力增长，可以在高峰时单独降级某个服务为核心业务让路。</p>
+<p>所以我们实现了基于RPC的服务框架，<br>我们以Thrift作为通信骨架，在其之上做了failover、loadbalance以及retry策略，同时将性能统计和降级开关等通用逻辑以filter chain的方式加上去。之后再以zookeeper+curator的结构实现了服务注册和发现的机制。</p>
+<p>之后进一步的，我们抽象服务框架的通信过程，实现了面向消息的服务调用过程，主要用于那些『发射后不管』的业务场景，服务质量由消息组件来确保投递，比如业务通知这种弱通知。架构图如下<br><img src="https://ooo.0o0.ooo/2016/01/20/569ff113324da.png" alt="stage3-rpc.png"></p>
+<h2 id="u672A_u6765_u613F_u666F"><a href="#u672A_u6765_u613F_u666F" class="headerlink" title="未来愿景"></a>未来愿景</h2><h4 id="u66F4_u52A0_u4E91_u5316"><a href="#u66F4_u52A0_u4E91_u5316" class="headerlink" title="更加云化"></a>更加云化</h4><p>AWS的产品族非常丰富，随着数据量得进一步扩大，我们尝试将cache（不管是redis还是memcache）都替换成AWS的elastic cache service。<br>MySQL存储也尝试替换成AWS的RBD。<br>各类Queue组件也尝试替换成AWS的EQS</p>
+<p>通过这种方式获得的最大的收益就是运维更加友好和轻松，围绕这些基础设施的高可用，容错，跨机房同步等等事情，都交给AWS去做。业界类似的例子很多，比如Instagram，Netflix等。</p>
+<h4 id="u5F00_u6E90_u56DE_u9988_u793E_u533A"><a href="#u5F00_u6E90_u56DE_u9988_u793E_u533A" class="headerlink" title="开源回馈社区"></a>开源回馈社区</h4><p>Mico产品不断得架构改造升级过程中，我们借鉴、使用了大量业界成熟可靠的开源组件或系统。每一个都发挥了非常重要的作用。使得我们产品能够站在巨人的肩膀上快速发展。同时作为技术负责人，我也从各类开源项目中汲取了大量知识，实践过程中也积累了大量经验，这令我受益匪浅。</p>
+<p>对于未来Mico的发展过程中，我们团队也将积极得参与到开源社区中，贡献我们的绵薄之力。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[Mico是一款基于LBS的匿名社交应用，过去两年来一直深耕海外市场，并长期在阿语地区、东南亚等地区的社交应用榜单的Top10。本文将由浅入深得解析其架构演进的过程，分享在这一过程中的经验和见解，同时希望能给那些同样构建社交应用的同仁一些帮助。]]>
+    
+    </summary>
+    
+      <category term="IM" scheme="http://lifeplayer.me/tags/IM/"/>
+    
+      <category term="LBS" scheme="http://lifeplayer.me/tags/LBS/"/>
+    
+      <category term="架构设计" scheme="http://lifeplayer.me/tags/%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/"/>
+    
+      <category term="社交应用" scheme="http://lifeplayer.me/tags/%E7%A4%BE%E4%BA%A4%E5%BA%94%E7%94%A8/"/>
+    
+      <category term="技术" scheme="http://lifeplayer.me/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[Hello World]]></title>
+    <link href="http://lifeplayer.me/2016/01/14/hello-world/"/>
+    <id>http://lifeplayer.me/2016/01/14/hello-world/</id>
+    <published>2016-01-14T07:13:10.000Z</published>
+    <updated>2016-01-14T07:13:10.000Z</updated>
+    <content type="html"><![CDATA[<p>Welcome to <a href="http://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="http://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="http://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
+<h2 id="Quick_Start"><a href="#Quick_Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create_a_new_post"><a href="#Create_a_new_post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
+<p>More info: <a href="http://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
+<h3 id="Run_server"><a href="#Run_server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="http://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
+<h3 id="Generate_static_files"><a href="#Generate_static_files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="http://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
+<h3 id="Deploy_to_remote_sites"><a href="#Deploy_to_remote_sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="http://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>Welcome to <a href="http://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="http://hexo.io]]>
+    </summary>
+    
+  </entry>
+  
+</feed>
